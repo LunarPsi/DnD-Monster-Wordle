@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Monster Wordle</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0e6d2;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            color: #8b0000;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        h2 {
+            text-align: center;
+            color: #666;
+            font-size: 1.2rem;
+            margin-top: 0;
+            margin-bottom: 30px;
+        }
+        .container {
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        #game-board {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #8b0000;
+            color: white;
+        }
+        .correct {
+            background-color: #4caf50;
+            color: white;
+        }
+        .higher {
+            background-color: #ff9800;
+            color: white;
+        }
+        .lower {
+            background-color: #2196f3;
+            color: white;
+        }
+        .incorrect {
+            background-color: #f44336;
+            color: white;
+        }
+        .monster-input {
+            width: 100%;
+            padding: 10px;
+            font-size: 1rem;
+            margin-bottom: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+        #monster-submit {
+            background-color: #8b0000;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        #monster-submit:hover {
+            background-color: #6b0000;
+        }
+        .monster-row {
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #info-container {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+        }
+        #guesses-left, #timer {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            background-color: #efefef;
+            border-radius: 5px;
+        }
+        #timer { color: #8b0000; }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+            display: none;
+        }
+        .win { background-color: #4caf50; color: white; }
+        .lose { background-color: #f44336; color: white; }
+        .monster-list {
+            height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin-top: 10px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        #monster-autocomplete {
+            position: absolute;
+            border: 1px solid #ddd;
+            border-top: none;
+            z-index: 99;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: white;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        .autocomplete-item {
+            padding: 10px;
+            cursor: pointer;
+        }
+        .autocomplete-item:hover {
+            background-color: #f1f1f1;
+        }
+        .input-container {
+            position: relative;
+        }
+        .instructions {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #fffde7;
+            border-left: 5px solid #ffd54f;
+            border-radius: 5px;
+        }
+        .key {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 10px;
+        }
+        .key-item {
+            display: flex;
+            align-items: center;
+            margin: 5px;
+        }
+        .key-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+            border-radius: 3px;
+        }
+        .help-button {
+            background: none;
+            border: none;
+            color: #8b0000;
+            cursor: pointer;
+            font-size: 1.5rem;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            z-index: 100;
+        }
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 10px;
+            position: relative;
+        }
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        #new-game {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>D&D Monster Wordle</h1>
+    <h2>Guess the monster in 8 tries!</h2>
+    
+    <button class="help-button" id="help-button">?</button>
+    
+    <div class="modal" id="help-modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>How to Play</h2>
+            <p>Try to guess the D&D monster by comparing its attributes!</p>
+            <ul>
+                <li>You have 8 guesses to figure out the mystery monster</li>
+                <li>Each guess must be a valid D&D monster from the database</li>
+                <li>After each guess, you'll get hints about how close you are</li>
+            </ul>
+            
+            <h3>Color Guide:</h3>
+            <div class="key">
+                <div class="key-item">
+                    <div class="key-color" style="background-color: #4caf50;"></div>
+                    <span>Exact match</span>
+                </div>
+                <div class="key-item">
+                    <div class="key-color" style="background-color: #ff9800;"></div>
+                    <span>Target is higher</span>
+                </div>
+                <div class="key-item">
+                    <div class="key-color" style="background-color: #2196f3;"></div>
+                    <span>Target is lower</span>
+                </div>
+                <div class="key-item">
+                    <div class="key-color" style="background-color: #f44336;"></div>
+                    <span>No match</span>
+                </div>
+            </div>
+            
+            <p>The goal is to guess the monster with the fewest tries!</p>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="instructions">
+            <p>Guess the D&D monster by comparing its attributes. Enter your guess below and see how close you are!</p>
+            <div class="key">
+                <div class="key-item">
+                    <div class="key-color" style="background-color: #4caf50;"></div>
+                    <span>Exact match</span>
+                </div>
+                <div class="key-item">
+                    <div class="key-color" style="background-color: #ff9800;"></div>
+                    <span>Target is higher</span>
+                </div>
+                <div class="key-item">
+                    <div class="key-color" style="background-color: #2196f3;"></div>
+                    <span>Target is lower</span>
+                </div>
+                <div class="key-item">
+                    <div class="key-color" style="background-color: #f44336;"></div>
+                    <span>No match</span>
+                </div>
+            </div>
+        </div>
+        
+        <div id="info-container">
+            <div id="guesses-left">Guesses: 8 remaining</div>
+            <div id="timer">Time: 00:00</div>
+        </div>
+        
+        <div class="input-container">
+            <input type="text" id="monster-input" class="monster-input" placeholder="Enter a D&D monster...">
+            <div id="monster-autocomplete"></div>
+        </div>
+        <button id="monster-submit">Guess</button>
+        
+        <div id="game-board">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Monster</th>
+                        <th>Year Intro</th>
+                        <th>Intro Book</th>
+                        <th>Type</th>
+                        <th>Plane</th>
+                        <th>Alignment</th>
+                        <th>Size</th>
+                        <th>CR</th>
+                        <th>HP</th>
+                        <th>AC</th>
+                    </tr>
+                </thead>
+                <tbody id="guesses">
+                    <!-- Guesses will be added here -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="result"></div>
+        <button id="new-game">New Game</button>
+
+
+        <p>Made by Claude AI and LunarPsi, Dungeons and Dragons and monsters is owned by Wizards of the Coast, this is a fan work with no associations with WotC or Hasbro.</p>
+        <p>As the data is compiled by AI, much information is wrong, this will eventually be fixed</p>
+    </div>
+    
+    <script>
+        // D&D Monster Database with Year Introduced, Type, CR, HP, and AC
+        const monsterDatabase = [
+            { name: "Aboleth", year: 1977, book: "Dwellers of the Forbidden City", type: "Aberration", alignment: "Lawful Evil", plane: "Far Realms", size: "Large", cr: 10, hp: 135, ac: 17 },
+            { name: "Abominable Yeti", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Chaotic Evil", plane: "Material Plane", size: "Huge", cr: 9, hp: 137, HD: 11, ac: 15 },
+            { name: "Acolyte", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Any", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 9, HD: 2, ac: 10 },
+            { name: "Adult Black Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Evil", plane: "Material Plane", size: "Huge", cr: 14, hp: 195, HD: 17, ac: 19 },
+            { name: "Adult Blue Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Evil", plane: "Material Plane", size: "Huge", cr: 16, hp: 225, HD: 18, ac: 19 },
+            { name: "Adult Brass Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Good", plane: "Material Plane", size: "Huge", cr: 13, hp: 172, HD: 15, ac: 18 },
+            { name: "Adult Bronze Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Good", plane: "Material Plane", size: "Huge", cr: 15, hp: 212, HD: 17, ac: 19 },
+            { name: "Adult Copper Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Good", plane: "Material Plane", size: "Huge", cr: 14, hp: 184, HD: 16, ac: 18 },
+            { name: "Adult Gold Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Good", plane: "Material Plane", size: "Huge", cr: 17, hp: 256, HD: 19, ac: 19 },
+            { name: "Adult Green Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Evil", plane: "Material Plane", size: "Huge", cr: 15, hp: 207, HD: 18, ac: 19 },
+            { name: "Adult Red Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Evil", plane: "Material Plane", size: "Huge", cr: 17, hp: 256, HD: 19, ac: 19 },
+            { name: "Adult Silver Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Good", plane: "Material Plane", size: "Huge", cr: 16, hp: 243, HD: 18, ac: 19 },
+            { name: "Adult White Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Evil", plane: "Material Plane", size: "Huge", cr: 13, hp: 200, HD: 16, ac: 18 },
+            { name: "Air Elemental", year: 1974, book: "Original D&D", type: "Elemental", alignment: "Neutral", plane: "Elemental Plane of Air", size: "Large", cr: 5, hp: 90, HD: 12, ac: 15 },
+            { name: "Allosaurus", year: 1981, book: "Fiend Folio", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 2, hp: 51, HD: 6, ac: 13 },
+            { name: "Ancient Black Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Evil", plane: "Material Plane", size: "Gargantuan", cr: 21, hp: 367, HD: 21, ac: 22 },
+            { name: "Ancient Blue Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Evil", plane: "Material Plane", size: "Gargantuan", cr: 23, hp: 481, HD: 26, ac: 22 },
+            { name: "Ancient Brass Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Good", plane: "Material Plane", size: "Gargantuan", cr: 20, hp: 297, HD: 17, ac: 20 },
+            { name: "Ancient Bronze Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Good", plane: "Material Plane", size: "Gargantuan", cr: 22, hp: 444, HD: 24, ac: 22 },
+            { name: "Ancient Copper Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Good", plane: "Material Plane", size: "Gargantuan", cr: 21, hp: 350, HD: 20, ac: 21 },
+            { name: "Ancient Gold Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Good", plane: "Material Plane", size: "Gargantuan", cr: 24, hp: 546, HD: 28, ac: 22 },
+            { name: "Ancient Green Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Evil", plane: "Material Plane", size: "Gargantuan", cr: 22, hp: 385, HD: 22, ac: 21 },
+            { name: "Ancient Red Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Evil", plane: "Material Plane", size: "Gargantuan", cr: 24, hp: 546, HD: 28, ac: 22 },
+            { name: "Ancient Silver Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Good", plane: "Material Plane", size: "Gargantuan", cr: 23, hp: 487, HD: 25, ac: 22 },
+            { name: "Ancient White Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Evil", plane: "Material Plane", size: "Gargantuan", cr: 20, hp: 333, HD: 18, ac: 20 },
+            { name: "Androsphinx", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Lawful Neutral", plane: "Material Plane", size: "Large", cr: 17, hp: 199, HD: 19, ac: 17 },
+            { name: "Animated Armor", year: 1977, book: "Monster Manual (1e)", type: "Construct", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 1, hp: 33, HD: 6, ac: 18 },
+            { name: "Ankheg", year: 1975, book: "Blackmoor", type: "Monstrosity", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 2, hp: 39, HD: 6, ac: 14 },
+            { name: "Ankylosaurus", year: 1981, book: "Fiend Folio", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Huge", cr: 3, hp: 68, HD: 8, ac: 15 },
+            { name: "Ape", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.5, hp: 19, HD: 3, ac: 12 },
+            { name: "Arcanaloth", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Neutral Evil", plane: "Lower Planes", size: "Medium", cr: 12, hp: 104, HD: 16, ac: 17 },
+            { name: "Archmage", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Any", plane: "Material Plane", size: "Medium", cr: 12, hp: 99, HD: 18, ac: 12 },
+            { name: "Assassin", year: 1975, book: "Greyhawk", type: "Humanoid", alignment: "Any Non-Good", plane: "Material Plane", size: "Medium", cr: 8, hp: 78, HD: 12, ac: 15 },
+            { name: "Awakened Shrub", year: 2000, book: "Monster Manual (3e)", type: "Plant", alignment: "Unaligned", plane: "Material Plane", size: "Small", cr: 0, hp: 10, HD: 3, ac: 9 },
+            { name: "Awakened Tree", year: 2000, book: "Monster Manual (3e)", type: "Plant", alignment: "Unaligned", plane: "Material Plane", size: "Huge", cr: 2, hp: 59, HD: 7, ac: 13 },
+            { name: "Axe Beak", year: 1981, book: "Fiend Folio", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 0.25, hp: 19, HD: 3, ac: 11 },
+            { name: "Azer", year: 1981, book: "Fiend Folio", type: "Elemental", alignment: "Lawful Neutral", plane: "Elemental Plane of Fire", size: "Medium", cr: 2, hp: 39, HD: 6, ac: 17 },
+            
+            
+            { name: "Baboon", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Small", cr: 0, hp: 3, HD: 1, ac: 12 },
+            { name: "Badger", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Tiny", cr: 0, hp: 3, HD: 1, ac: 10 },
+            { name: "Balor", year: 1976, book: "Eldritch Wizardry", type: "Fiend", alignment: "Chaotic Evil", plane: "The Abyss", size: "Huge", cr: 19, hp: 262, HD: 21, ac: 19 },
+            { name: "Bandit", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Any Non-Lawful", plane: "Material Plane", size: "Medium", cr: 0.125, hp: 11, HD: 2, ac: 12 },
+            { name: "Bandit Captain", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Any Non-Lawful", plane: "Material Plane", size: "Medium", cr: 2, hp: 65, HD: 10, ac: 15 },
+            { name: "Banshee", year: 1977, book: "Monster Manual (1e)", type: "Undead", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 4, hp: 58, HD: 13, ac: 12 },
+            { name: "Barbed Devil", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Lawful Evil", plane: "The Nine Hells", size: "Medium", cr: 5, hp: 110, HD: 13, ac: 15 },
+            { name: "Barlgura", year: 2000, book: "Monster Manual (3e)", type: "Fiend", alignment: "Chaotic Evil", plane: "The Abyss", size: "Large", cr: 5, hp: 68, HD: 8, ac: 15 },
+            { name: "Basilisk", year: 1975, book: "Greyhawk", type: "Monstrosity", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 3, hp: 52, HD: 8, ac: 15 },
+            { name: "Bat", year: 1974, book: "Original D&D", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Tiny", cr: 0, hp: 1, HD: 1, ac: 12 },
+            { name: "Bearded Devil", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Lawful Evil", plane: "The Nine Hells", size: "Medium", cr: 3, hp: 52, HD: 8, ac: 13 },
+            { name: "Behir", year: 1981, book: "Fiend Folio", type: "Monstrosity", alignment: "Neutral Evil", plane: "Material Plane", size: "Huge", cr: 11, hp: 168, HD: 16, ac: 17 },
+            { name: "Beholder", year: 1975, book: "Greyhawk", type: "Aberration", alignment: "Lawful Evil", plane: "Material Plane", size: "Large", cr: 13, hp: 180, HD: 19, ac: 18 },
+            { name: "Berserker", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Any Chaotic", plane: "Material Plane", size: "Medium", cr: 2, hp: 67, HD: 9, ac: 13 },
+            { name: "Black Bear", year: 1974, book: "Original D&D", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.5, hp: 19, HD: 3, ac: 11 },
+            { name: "Black Dragon Wyrmling", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 2, hp: 33, HD: 6, ac: 17 },
+            { name: "Black Pudding", year: 1975, book: "Greyhawk", type: "Ooze", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 4, hp: 85, HD: 10, ac: 7 },
+            { name: "Blink Dog", year: 1975, book: "Greyhawk", type: "Fey", alignment: "Lawful Good", plane: "Feywild", size: "Medium", cr: 0.25, hp: 22, HD: 4, ac: 13 },
+            { name: "Blood Hawk", year: 2014, book: "Monster Manual (5e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Small", cr: 0.125, hp: 7, HD: 2, ac: 12 },
+            { name: "Blue Dragon Wyrmling", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Evil", plane: "Material Plane", size: "Medium", cr: 3, hp: 52, HD: 8, ac: 17 },
+            { name: "Boar", year: 1974, book: "Original D&D", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 11, HD: 2, ac: 11 },
+            { name: "Bone Devil", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Lawful Evil", plane: "The Nine Hells", size: "Large", cr: 9, hp: 142, HD: 15, ac: 19 },
+            { name: "Bone Naga", year: 1985, book: "Oriental Adventures", type: "Undead", alignment: "Lawful Evil", plane: "Material Plane", size: "Large", cr: 4, hp: 58, HD: 9, ac: 15 },
+            { name: "Brass Dragon Wyrmling", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Good", plane: "Material Plane", size: "Medium", cr: 1, hp: 16, HD: 3, ac: 16 },
+            { name: "Bronze Dragon Wyrmling", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Good", plane: "Material Plane", size: "Medium", cr: 2, hp: 32, HD: 5, ac: 17 },
+            { name: "Brown Bear", year: 1974, book: "Original D&D", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 1, hp: 34, HD: 4, ac: 11 },
+            { name: "Bugbear", year: 1975, book: "Greyhawk", type: "Humanoid", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 1, hp: 27, HD: 5, ac: 16 },
+            { name: "Bugbear Chief", year: 1975, book: "Greyhawk", type: "Humanoid", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 3, hp: 65, HD: 10, ac: 17 },
+            { name: "Bulette", year: 1975, book: "Greyhawk", type: "Monstrosity", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 5, hp: 94, HD: 9, ac: 17 },
+            { name: "Bullywug", year: 1981, book: "Fiend Folio", type: "Humanoid", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 11, HD: 2, ac: 15 },
+            
+            { name: "Cambion", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Any Evil", plane: "Lower Planes", size: "Medium", cr: 5, hp: 82, HD: 11, ac: 19 },
+            { name: "Camel", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 0.125, hp: 15, HD: 2, ac: 9 },
+            { name: "Carrion Crawler", year: 1975, book: "Greyhawk", type: "Monstrosity", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 2, hp: 51, HD: 6, ac: 13 },
+            { name: "Cat", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Tiny", cr: 0, hp: 2, HD: 1, ac: 12 },
+            { name: "Cave Bear", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 2, hp: 42, HD: 5, ac: 12 },
+            { name: "Centaur", year: 1974, book: "Original D&D", type: "Monstrosity", alignment: "Neutral Good", plane: "Material Plane", size: "Large", cr: 2, hp: 45, HD: 6, ac: 12 },
+            { name: "Chain Devil", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Lawful Evil", plane: "The Nine Hells", size: "Medium", cr: 8, hp: 85, HD: 10, ac: 16 },
+            { name: "Chimera", year: 1974, book: "Original D&D", type: "Monstrosity", alignment: "Chaotic Evil", plane: "Material Plane", size: "Large", cr: 6, hp: 114, HD: 12, ac: 14 },
+            { name: "Chuul", year: 2000, book: "Monster Manual (3e)", type: "Aberration", alignment: "Chaotic Evil", plane: "Material Plane", size: "Large", cr: 4, hp: 93, HD: 11, ac: 16 },
+            { name: "Clay Golem", year: 1975, book: "Greyhawk", type: "Construct", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 9, hp: 133, HD: 14, ac: 14 },
+            { name: "Cloaker", year: 1979, book: "Monster Manual (1e)", type: "Aberration", alignment: "Chaotic Neutral", plane: "Material Plane", size: "Large", cr: 8, hp: 78, HD: 12, ac: 14 },
+            { name: "Cloud Giant", year: 1975, book: "Greyhawk", type: "Giant", alignment: "Neutral Good/Evil", plane: "Material Plane", size: "Huge", cr: 9, hp: 200, HD: 16, ac: 14 },
+            { name: "Cockatrice", year: 1974, book: "Original D&D", type: "Monstrosity", alignment: "Unaligned", plane: "Material Plane", size: "Small", cr: 0.5, hp: 27, HD: 6, ac: 11 },
+            { name: "Commoner", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Any", plane: "Material Plane", size: "Medium", cr: 0, hp: 4, HD: 1, ac: 10 },
+            { name: "Constrictor Snake", year: 1974, book: "Original D&D", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 0.25, hp: 13, HD: 2, ac: 12 },
+            { name: "Copper Dragon Wyrmling", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Good", plane: "Material Plane", size: "Medium", cr: 1, hp: 22, HD: 4, ac: 16 },
+            { name: "Couatl", year: 1975, book: "Greyhawk", type: "Celestial", alignment: "Lawful Good", plane: "Upper Planes", size: "Medium", cr: 4, hp: 97, HD: 13, ac: 19 },
+            { name: "Crab", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Tiny", cr: 0, hp: 2, HD: 1, ac: 11 },
+            { name: "Crocodile", year: 1974, book: "Original D&D", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 0.5, hp: 19, HD: 3, ac: 12 },
+            { name: "Cult Fanatic", year: 2000, book: "Monster Manual (3e)", type: "Humanoid", alignment: "Any Non-Good", plane: "Material Plane", size: "Medium", cr: 2, hp: 33, HD: 6, ac: 13 },
+            { name: "Cultist", year: 2000, book: "Monster Manual (3e)", type: "Humanoid", alignment: "Any Non-Good", plane: "Material Plane", size: "Medium", cr: 0.125, hp: 9, HD: 2, ac: 12 },
+            { name: "Cyclops", year: 1975, book: "Greyhawk", type: "Giant", alignment: "Chaotic Neutral", plane: "Material Plane", size: "Huge", cr: 6, hp: 138, HD: 12, ac: 14 },
+            
+            { name: "Darkmantle", year: 2000, book: "Monster Manual (3e)", type: "Monstrosity", alignment: "Unaligned", plane: "Material Plane", size: "Small", cr: 0.5, hp: 22, HD: 5, ac: 11 },
+            { name: "Death Dog", year: 2014, book: "Monster Manual (5e)", type: "Monstrosity", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 1, hp: 39, HD: 6, ac: 12 },
+            { name: "Death Knight", year: 1981, book: "Fiend Folio", type: "Undead", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 17, hp: 180, HD: 19, ac: 20 },
+            { name: "Death Slaad", year: 1981, book: "Fiend Folio", type: "Aberration", alignment: "Chaotic Evil", plane: "Limbo", size: "Medium", cr: 10, hp: 170, HD: 20, ac: 18 },
+            { name: "Death Tyrant", year: 2014, book: "Monster Manual (5e)", type: "Undead", alignment: "Lawful Evil", plane: "Material Plane", size: "Large", cr: 14, hp: 187, HD: 19, ac: 19 },
+            { name: "Deep Gnome", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Neutral Good", plane: "Material Plane", size: "Small", cr: 0.5, hp: 16, HD: 3, ac: 15 },
+            { name: "Deer", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0, hp: 4, HD: 1, ac: 13 },
+            { name: "Demilich", year: 1983, book: "Tomb of Horrors", type: "Undead", alignment: "Neutral Evil", plane: "Material Plane", size: "Tiny", cr: 18, hp: 80, HD: 20, ac: 20 },
+            { name: "Deva", year: 1977, book: "Monster Manual (1e)", type: "Celestial", alignment: "Lawful Good", plane: "Upper Planes", size: "Medium", cr: 10, hp: 136, HD: 16, ac: 17 },
+            { name: "Dire Wolf", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 1, hp: 37, HD: 5, ac: 14 },
+            { name: "Displacer Beast", year: 1975, book: "Greyhawk", type: "Monstrosity", alignment: "Lawful Evil", plane: "Material Plane", size: "Large", cr: 3, hp: 85, HD: 10, ac: 13 },
+            { name: "Djinni", year: 1974, book: "Original D&D", type: "Elemental", alignment: "Chaotic Good", plane: "Elemental Plane of Air", size: "Large", cr: 11, hp: 161, HD: 14, ac: 17 },
+            { name: "Doppelganger", year: 1974, book: "Original D&D", type: "Monstrosity", alignment: "Neutral", plane: "Material Plane", size: "Medium", cr: 3, hp: 52, HD: 8, ac: 14 },
+            { name: "Draft Horse", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 0.25, hp: 19, HD: 3, ac: 10 },
+            { name: "Dragon Turtle", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Neutral", plane: "Material Plane", size: "Gargantuan", cr: 17, hp: 341, HD: 22, ac: 20 },
+            { name: "Dretch", year: 1976, book: "Eldritch Wizardry", type: "Fiend", alignment: "Chaotic Evil", plane: "The Abyss", size: "Small", cr: 0.25, hp: 18, HD: 4, ac: 11 },
+            { name: "Drider", year: 1978, book: "Hall of the Fire Giant King", type: "Monstrosity", alignment: "Chaotic Evil", plane: "Material Plane", size: "Large", cr: 6, hp: 123, HD: 13, ac: 19 },
+            { name: "Drow", year: 1978, book: "Hall of the Fire Giant King", type: "Humanoid", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 13, HD: 3, ac: 15 },
+            { name: "Drow Elite Warrior", year: 1978, book: "Hall of the Fire Giant King", type: "Humanoid", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 5, hp: 71, HD: 11, ac: 18 },
+            { name: "Drow Mage", year: 1978, book: "Hall of the Fire Giant King", type: "Humanoid", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 7, hp: 45, HD: 10, ac: 12 },
+            { name: "Drow Priestess of Lolth", year: 1978, book: "Hall of the Fire Giant King", type: "Humanoid", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 8, hp: 71, HD: 13, ac: 16 },
+            { name: "Druid", year: 1974, book: "Original D&D", type: "Humanoid", alignment: "Any", plane: "Material Plane", size: "Medium", cr: 2, hp: 27, HD: 5, ac: 16 },
+            { name: "Dryad", year: 1974, book: "Original D&D", type: "Fey", alignment: "Neutral", plane: "Feywild", size: "Medium", cr: 1, hp: 22, HD: 5, ac: 11 },
+            { name: "Duergar", year: 1978, book: "Descent into the Depths of the Earth", type: "Humanoid", alignment: "Lawful Evil", plane: "Material Plane", size: "Medium", cr: 1, hp: 26, HD: 4, ac: 16 },
+            { name: "Dust Mephit", year: 1977, book: "Monster Manual (1e)", type: "Elemental", alignment: "Neutral Evil", plane: "Elemental Plane of Earth", size: "Small", cr: 0.5, hp: 17, HD: 5, ac: 12 },
+            
+            { name: "Eagle", year: 1974, book: "Original D&D", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Small", cr: 0, hp: 3, HD: 1, ac: 12 },
+            { name: "Earth Elemental", year: 1974, book: "Original D&D", type: "Elemental", alignment: "Neutral", plane: "Elemental Plane of Earth", size: "Large", cr: 5, hp: 126, HD: 12, ac: 17 },
+            { name: "Efreeti", year: 1974, book: "Original D&D", type: "Elemental", alignment: "Lawful Evil", plane: "Elemental Plane of Fire", size: "Large", cr: 11, hp: 200, HD: 16, ac: 17 },
+            { name: "Elephant", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Huge", cr: 4, hp: 76, HD: 8, ac: 12 },
+            { name: "Elk", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 0.25, hp: 13, HD: 2, ac: 10 },
+            { name: "Empyrean", year: 1985, book: "Manual of the Planes", type: "Celestial", alignment: "Chaotic Good", plane: "Upper Planes", size: "Huge", cr: 23, hp: 313, HD: 19, ac: 22 },
+            { name: "Erinyes", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Lawful Evil", plane: "The Nine Hells", size: "Medium", cr: 12, hp: 153, HD: 18, ac: 18 },
+            { name: "Ettercap", year: 1981, book: "Fiend Folio", type: "Monstrosity", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 2, hp: 44, HD: 8, ac: 13 },
+            { name: "Ettin", year: 1975, book: "Greyhawk", type: "Giant", alignment: "Chaotic Evil", plane: "Material Plane", size: "Large", cr: 4, hp: 85, HD: 10, ac: 12 },
+            
+            { name: "Faerie Dragon", year: 1981, book: "Fiend Folio", type: "Dragon", alignment: "Chaotic Good", plane: "Feywild", size: "Tiny", cr: 1, hp: 14, HD: 4, ac: 15 },
+            { name: "Fire Elemental", year: 1974, book: "Original D&D", type: "Elemental", alignment: "Neutral", plane: "Elemental Plane of Fire", size: "Large", cr: 5, hp: 102, HD: 12, ac: 13 },
+            { name: "Fire Giant", year: 1975, book: "Greyhawk", type: "Giant", alignment: "Lawful Evil", plane: "Material Plane", size: "Huge", cr: 9, hp: 162, HD: 13, ac: 18 },
+            { name: "Flameskull", year: 1979, book: "White Plume Mountain", type: "Undead", alignment: "Neutral Evil", plane: "Material Plane", size: "Tiny", cr: 4, hp: 40, HD: 9, ac: 13 },
+            { name: "Flesh Golem", year: 1975, book: "Greyhawk", type: "Construct", alignment: "Neutral", plane: "Material Plane", size: "Medium", cr: 5, hp: 93, HD: 11, ac: 9 },
+            { name: "Flumph", year: 1981, book: "Fiend Folio", type: "Aberration", alignment: "Lawful Good", plane: "Material Plane", size: "Small", cr: 0.125, hp: 7, HD: 2, ac: 12 },
+            { name: "Flying Snake", year: 2000, book: "Monster Manual (3e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Tiny", cr: 0.125, hp: 5, HD: 2, ac: 14 },
+            { name: "Flying Sword", year: 1979, book: "Dungeon Masters Guide (1e)", type: "Construct", alignment: "Unaligned", plane: "Material Plane", size: "Small", cr: 0.25, hp: 17, HD: 5, ac: 17 },
+            { name: "Fomorian", year: 1981, book: "Fiend Folio", type: "Giant", alignment: "Chaotic Evil", plane: "Feywild", size: "Huge", cr: 8, hp: 149, HD: 13, ac: 14 },
+            { name: "Frog", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Tiny", cr: 0, hp: 1, HD: 1, ac: 11 },
+            { name: "Frost Giant", year: 1975, book: "Greyhawk", type: "Giant", alignment: "Neutral Evil", plane: "Material Plane", size: "Huge", cr: 8, hp: 138, HD: 12, ac: 15 },
+            
+            
+            { name: "Galeb Duhr", year: 1983, book: "Monster Manual II (1e)", type: "Elemental", alignment: "Neutral", plane: "Elemental Plane of Earth", size: "Medium", cr: 6, hp: 85, HD: 9, ac: 16 },
+            { name: "Gargoyle", year: 1977, book: "Monster Manual (1e)", type: "Elemental", alignment: "Chaotic Evil", plane: "Elemental Plane of Earth", size: "Medium", cr: 2, hp: 52, HD: 7, ac: 15 },
+            { name: "Gas Spore", year: 1983, book: "Monster Manual II (1e)", type: "Plant", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.5, hp: 1, HD: 1, ac: 5 },
+            { name: "Gelatinous Cube", year: 1977, book: "Monster Manual (1e)", type: "Ooze", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 2, hp: 84, HD: 8, ac: 6 },
+            { name: "Ghast", year: 1977, book: "Monster Manual (1e)", type: "Undead", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 2, hp: 36, HD: 8, ac: 13 },
+            { name: "Ghost", year: 1977, book: "Monster Manual (1e)", type: "Undead", alignment: "Any", plane: "Material Plane", size: "Medium", cr: 4, hp: 45, HD: 10, ac: 11 },
+            { name: "Ghoul", year: 1977, book: "Monster Manual (1e)", type: "Undead", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 1, hp: 22, HD: 5, ac: 12 },
+            { name: "Giant Ape", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Huge", cr: 7, hp: 157, HD: 15, ac: 12 },
+            { name: "Giant Badger", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 13, HD: 2, ac: 10 },
+            { name: "Giant Bat", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 0.25, hp: 22, HD: 4, ac: 13 },
+            { name: "Giant Boar", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 2, hp: 42, HD: 5, ac: 12 },
+            { name: "Giant Centipede", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Small", cr: 0.25, hp: 4, HD: 1, ac: 13 },
+            { name: "Giant Constrictor Snake", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Huge", cr: 2, hp: 60, HD: 8, ac: 12 },
+            { name: "Giant Crab", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.125, hp: 13, HD: 3, ac: 15 },
+            { name: "Giant Crocodile", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Huge", cr: 5, hp: 85, HD: 9, ac: 14 },
+            { name: "Giant Eagle", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Neutral Good", plane: "Material Plane", size: "Large", cr: 1, hp: 26, HD: 4, ac: 13 },
+            { name: "Giant Elk", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Huge", cr: 2, hp: 42, HD: 5, ac: 14 },
+            { name: "Giant Fire Beetle", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Small", cr: 0, hp: 4, HD: 1, ac: 13 },
+            { name: "Giant Frog", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 18, HD: 4, ac: 11 },
+            { name: "Giant Goat", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 0.5, hp: 19, HD: 3, ac: 11 },
+            { name: "Giant Hyena", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 1, hp: 45, HD: 6, ac: 12 },
+            { name: "Giant Lizard", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 0.25, hp: 19, HD: 3, ac: 12 },
+            { name: "Giant Octopus", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 1, hp: 52, HD: 8, ac: 11 },
+            { name: "Giant Owl", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Neutral", plane: "Material Plane", size: "Large", cr: 0.25, hp: 19, HD: 3, ac: 12 },
+            { name: "Giant Poisonous Snake", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 11, HD: 2, ac: 14 },
+            { name: "Giant Rat", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Small", cr: 0.125, hp: 7, HD: 2, ac: 12 },
+            { name: "Giant Scorpion", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 3, hp: 52, HD: 7, ac: 15 },
+            { name: "Giant Sea Horse", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 0.5, hp: 16, HD: 3, ac: 13 },
+            { name: "Giant Shark", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Huge", cr: 5, hp: 126, HD: 11, ac: 13 },
+            { name: "Giant Spider", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 1, hp: 26, HD: 4, ac: 14 },
+            { name: "Giant Toad", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 1, hp: 39, HD: 6, ac: 11 },
+            { name: "Giant Vulture", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Neutral Evil", plane: "Material Plane", size: "Large", cr: 1, hp: 22, HD: 3, ac: 10 },
+            { name: "Giant Wasp", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.5, hp: 13, HD: 3, ac: 12 },
+            { name: "Giant Weasel", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.125, hp: 9, HD: 2, ac: 13 },
+            { name: "Giant Wolf Spider", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 11, HD: 2, ac: 13 },
+            { name: "Gibbering Mouther", year: 1981, book: "Fiend Folio", type: "Aberration", alignment: "Neutral", plane: "Material Plane", size: "Medium", cr: 2, hp: 67, HD: 9, ac: 9 },
+            { name: "Glabrezu", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Chaotic Evil", plane: "The Abyss", size: "Large", cr: 9, hp: 157, HD: 15, ac: 17 },
+            { name: "Gladiator", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Any", plane: "Material Plane", size: "Medium", cr: 5, hp: 112, HD: 15, ac: 16 },
+            { name: "Gnoll", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 0.5, hp: 22, HD: 5, ac: 15 },
+            { name: "Gnoll Fang of Yeenoghu", year: 2000, book: "Monster Manual (3e)", type: "Fiend", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 4, hp: 65, HD: 10, ac: 14 },
+            { name: "Gnoll Pack Lord", year: 2000, book: "Monster Manual (3e)", type: "Humanoid", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 2, hp: 49, HD: 9, ac: 15 },
+            { name: "Goblin", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Neutral Evil", plane: "Material Plane", size: "Small", cr: 0.25, hp: 7, HD: 2, ac: 15 },
+            { name: "Goblin Boss", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Neutral Evil", plane: "Material Plane", size: "Small", cr: 1, hp: 21, HD: 6, ac: 17 },
+            { name: "Gold Dragon Wyrmling", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Good", plane: "Material Plane", size: "Medium", cr: 3, hp: 60, HD: 8, ac: 17 },
+            { name: "Gorgon", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 5, hp: 114, HD: 12, ac: 19 },
+            { name: "Gray Ooze", year: 1977, book: "Monster Manual (1e)", type: "Ooze", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.5, hp: 22, HD: 3, ac: 8 },
+            { name: "Gray Slaad", year: 1981, book: "Fiend Folio", type: "Aberration", alignment: "Chaotic Neutral", plane: "Limbo", size: "Medium", cr: 9, hp: 127, HD: 17, ac: 18 },
+            { name: "Green Dragon Wyrmling", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Evil", plane: "Material Plane", size: "Medium", cr: 2, hp: 38, HD: 7, ac: 17 },
+            { name: "Green Hag", year: 1977, book: "Monster Manual (1e)", type: "Fey", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 3, hp: 82, HD: 11, ac: 17 },
+            { name: "Green Slaad", year: 1981, book: "Fiend Folio", type: "Aberration", alignment: "Chaotic Neutral", plane: "Limbo", size: "Large", cr: 8, hp: 127, HD: 15, ac: 16 },
+            { name: "Grick", year: 2000, book: "Monster Manual (3e)", type: "Monstrosity", alignment: "Neutral", plane: "Material Plane", size: "Medium", cr: 2, hp: 27, HD: 6, ac: 14 },
+            { name: "Grick Alpha", year: 2000, book: "Monster Manual (3e)", type: "Monstrosity", alignment: "Neutral", plane: "Material Plane", size: "Large", cr: 7, hp: 75, HD: 10, ac: 18 },
+            { name: "Griffon", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 2, hp: 59, HD: 7, ac: 12 },
+            { name: "Grimlock", year: 1981, book: "Fiend Folio", type: "Humanoid", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 11, HD: 2, ac: 11 },
+            { name: "Guardian Naga", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Lawful Good", plane: "Material Plane", size: "Large", cr: 10, hp: 127, HD: 15, ac: 18 },
+            { name: "Gynosphinx", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Lawful Neutral", plane: "Material Plane", size: "Large", cr: 11, hp: 136, HD: 16, ac: 17 },
+            
+            { name: "Half-Red Dragon Veteran", year: 2000, book: "Monster Manual (3e)", type: "Humanoid", alignment: "Any", plane: "Material Plane", size: "Medium", cr: 5, hp: 65, HD: 10, ac: 18 },
+            { name: "Harpy", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 1, hp: 38, HD: 7, ac: 11 },
+            { name: "Hawk", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Tiny", cr: 0, hp: 1, HD: 1, ac: 13 },
+            { name: "Hell Hound", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Lawful Evil", plane: "Nine Hells", size: "Medium", cr: 3, hp: 45, HD: 7, ac: 15 },
+            { name: "Hezrou", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Chaotic Evil", plane: "The Abyss", size: "Large", cr: 8, hp: 136, HD: 13, ac: 16 },
+            { name: "Hill Giant", year: 1977, book: "Monster Manual (1e)", type: "Giant", alignment: "Chaotic Evil", plane: "Material Plane", size: "Huge", cr: 5, hp: 105, HD: 10, ac: 13 },
+            { name: "Hippogriff", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 1, hp: 19, HD: 3, ac: 11 },
+            { name: "Hobgoblin", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Lawful Evil", plane: "Material Plane", size: "Medium", cr: 0.5, hp: 11, HD: 2, ac: 18 },
+            { name: "Hobgoblin Captain", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Lawful Evil", plane: "Material Plane", size: "Medium", cr: 3, hp: 39, HD: 6, ac: 17 },
+            { name: "Hobgoblin Warlord", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Lawful Evil", plane: "Material Plane", size: "Medium", cr: 6, hp: 97, HD: 13, ac: 20 },
+            { name: "Homunculus", year: 1977, book: "Monster Manual (1e)", type: "Construct", alignment: "Neutral", plane: "Material Plane", size: "Tiny", cr: 0, hp: 5, HD: 2, ac: 13 },
+            { name: "Hook Horror", year: 1981, book: "Fiend Folio", type: "Monstrosity", alignment: "Neutral", plane: "Material Plane", size: "Large", cr: 3, hp: 75, HD: 10, ac: 15 },
+            { name: "Horned Devil", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Lawful Evil", plane: "Nine Hells", size: "Large", cr: 11, hp: 178, HD: 17, ac: 18 },
+            { name: "Hunter Shark", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 2, hp: 45, HD: 6, ac: 12 },
+            { name: "Hydra", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Unaligned", plane: "Material Plane", size: "Huge", cr: 8, hp: 172, HD: 15, ac: 15 },
+            { name: "Hyena", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0, hp: 5, HD: 1, ac: 11 },
+            
+            { name: "Ice Devil", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Lawful Evil", plane: "Nine Hells", size: "Large", cr: 14, hp: 180, HD: 19, ac: 18 },
+            { name: "Ice Mephit", year: 1981, book: "Fiend Folio", type: "Elemental", alignment: "Neutral Evil", plane: "Elemental Plane of Ice", size: "Small", cr: 0.5, hp: 21, HD: 6, ac: 11 },
+            { name: "Imp", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Lawful Evil", plane: "Nine Hells", size: "Tiny", cr: 1, hp: 10, HD: 3, ac: 13 },
+            { name: "Intellect Devourer", year: 1977, book: "Monster Manual (1e)", type: "Aberration", alignment: "Lawful Evil", plane: "Material Plane", size: "Small", cr: 2, hp: 21, HD: 6, ac: 12 },
+            { name: "Invisible Stalker", year: 1977, book: "Monster Manual (1e)", type: "Elemental", alignment: "Neutral", plane: "Elemental Plane of Air", size: "Medium", cr: 6, hp: 104, HD: 16, ac: 14 },
+            { name: "Iron Golem", year: 1977, book: "Monster Manual (1e)", type: "Construct", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 16, hp: 210, HD: 20, ac: 20 },
+            
+            { name: "Jackal", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Small", cr: 0, hp: 3, HD: 1, ac: 12 },
+            { name: "Jackalwere", year: 1981, book: "Fiend Folio", type: "Humanoid", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 0.5, hp: 18, HD: 4, ac: 12 },
+            
+            { name: "Kenku", year: 1981, book: "Fiend Folio", type: "Humanoid", alignment: "Chaotic Neutral", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 13, HD: 3, ac: 13 },
+            { name: "Killer Whale", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Huge", cr: 3, hp: 90, HD: 12, ac: 12 },
+            { name: "Knight", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Any", plane: "Material Plane", size: "Medium", cr: 3, hp: 52, HD: 8, ac: 18 },
+            { name: "Kobold", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Lawful Evil", plane: "Material Plane", size: "Small", cr: 0.125, hp: 5, HD: 2, ac: 12 },
+            { name: "Kraken", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Chaotic Evil", plane: "Material Plane", size: "Gargantuan", cr: 23, hp: 472, HD: 27, ac: 18 },
+            { name: "Kuo-toa", year: 1981, book: "Fiend Folio", type: "Humanoid", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 18, HD: 4, ac: 13 },
+            { name: "Kuo-toa Archpriest", year: 1981, book: "Fiend Folio", type: "Humanoid", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 6, hp: 97, HD: 13, ac: 13 },
+            { name: "Kuo-toa Whip", year: 1981, book: "Fiend Folio", type: "Humanoid", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 1, hp: 65, HD: 10, ac: 11 },
+            
+            { name: "Lamia", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Chaotic Evil", plane: "Material Plane", size: "Large", cr: 4, hp: 97, HD: 13, ac: 13 },
+            { name: "Lemure", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Lawful Evil", plane: "Nine Hells", size: "Medium", cr: 0, hp: 13, HD: 3, ac: 7 },
+            { name: "Lich", year: 1977, book: "Monster Manual (1e)", type: "Undead", alignment: "Any Evil", plane: "Material Plane", size: "Medium", cr: 21, hp: 135, HD: 18, ac: 17 },
+            { name: "Lion", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 1, hp: 26, HD: 4, ac: 12 },
+            { name: "Lizard", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Tiny", cr: 0, hp: 2, HD: 1, ac: 10 },
+            { name: "Lizardfolk", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Neutral", plane: "Material Plane", size: "Medium", cr: 0.5, hp: 22, HD: 4, ac: 15 },
+            { name: "Lizardfolk Shaman", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Neutral", plane: "Material Plane", size: "Medium", cr: 2, hp: 27, HD: 5, ac: 13 },
+            { name: "Lycanthrope, Werebear", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Neutral Good", plane: "Material Plane", size: "Medium", cr: 5, hp: 135, HD: 18, ac: 10 },
+            { name: "Lycanthrope, Wereboar", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 4, hp: 78, HD: 12, ac: 10 },
+            { name: "Lycanthrope, Wererat", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Lawful Evil", plane: "Material Plane", size: "Medium", cr: 2, hp: 33, HD: 6, ac: 12 },
+            { name: "Lycanthrope, Weretiger", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Neutral", plane: "Material Plane", size: "Medium", cr: 4, hp: 120, HD: 16, ac: 12 },
+            { name: "Lycanthrope, Werewolf", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 3, hp: 58, HD: 9, ac: 11 },
+            
+            
+            { name: "Magma Mephit", year: 1983, book: "Monster Manual II", type: "Elemental", alignment: "Neutral Evil", plane: "Elemental Plane of Fire", size: "Small", cr: 0.5, hp: 22, HD: 5, ac: 11 },
+            { name: "Magmin", year: 1983, book: "Monster Manual II", type: "Elemental", alignment: "Chaotic Neutral", plane: "Elemental Plane of Fire", size: "Small", cr: 0.5, hp: 9, HD: 2, ac: 14 },
+            { name: "Mammoth", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Huge", cr: 6, hp: 126, HD: 11, ac: 13 },
+            { name: "Manticore", year: 1975, book: "Greyhawk", type: "Monstrosity", alignment: "Lawful Evil", plane: "Material Plane", size: "Large", cr: 3, hp: 68, HD: 8, ac: 14 },
+            { name: "Marilith", year: 1976, book: "Eldritch Wizardry", type: "Fiend", alignment: "Chaotic Evil", plane: "The Abyss", size: "Large", cr: 16, hp: 189, HD: 18, ac: 18 },
+            { name: "Mastiff", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.125, hp: 5, HD: 1, ac: 12 },
+            { name: "Medusa", year: 1974, book: "Original D&D", type: "Monstrosity", alignment: "Lawful Evil", plane: "Material Plane", size: "Medium", cr: 6, hp: 127, HD: 17, ac: 15 },
+            { name: "Merfolk", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Neutral", plane: "Material Plane", size: "Medium", cr: 0.125, hp: 11, HD: 2, ac: 11 },
+            { name: "Merrow", year: 1975, book: "Greyhawk", type: "Monstrosity", alignment: "Chaotic Evil", plane: "Material Plane", size: "Large", cr: 2, hp: 45, HD: 6, ac: 13 },
+            { name: "Mimic", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Neutral", plane: "Material Plane", size: "Medium", cr: 2, hp: 58, HD: 9, ac: 12 },
+            { name: "Mind Flayer", year: 1975, book: "Greyhawk", type: "Aberration", alignment: "Lawful Evil", plane: "Underdark", size: "Medium", cr: 7, hp: 71, HD: 13, ac: 15 },
+            { name: "Minotaur", year: 1974, book: "Original D&D", type: "Monstrosity", alignment: "Chaotic Evil", plane: "Material Plane", size: "Large", cr: 3, hp: 76, HD: 9, ac: 14 },
+            { name: "Minotaur Skeleton", year: 2000, book: "Monster Manual (3e)", type: "Undead", alignment: "Lawful Evil", plane: "Material Plane", size: "Large", cr: 2, hp: 67, HD: 9, ac: 12 },
+            { name: "Mummy", year: 1974, book: "Original D&D", type: "Undead", alignment: "Lawful Evil", plane: "Material Plane", size: "Medium", cr: 3, hp: 58, HD: 9, ac: 11 },
+            { name: "Mummy Lord", year: 1977, book: "Monster Manual (1e)", type: "Undead", alignment: "Lawful Evil", plane: "Material Plane", size: "Medium", cr: 15, hp: 97, HD: 13, ac: 17 },
+            
+            { name: "Nalfeshnee", year: 1976, book: "Eldritch Wizardry", type: "Fiend", alignment: "Chaotic Evil", plane: "The Abyss", size: "Large", cr: 13, hp: 184, HD: 16, ac: 18 },
+            { name: "Needle Blight", year: 2003, book: "Monster Manual (3.5e)", type: "Plant", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 11, HD: 2, ac: 12 },
+            { name: "Night Hag", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Neutral Evil", plane: "Lower Planes", size: "Medium", cr: 5, hp: 112, HD: 15, ac: 17 },
+            { name: "Nightmare", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Neutral Evil", plane: "Lower Planes", size: "Large", cr: 3, hp: 68, HD: 8, ac: 13 },
+            { name: "Nothic", year: 2008, book: "Monster Manual (4e)", type: "Aberration", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 2, hp: 45, HD: 6, ac: 15 },
+            
+            { name: "Ochre Jelly", year: 1974, book: "Original D&D", type: "Ooze", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 2, hp: 45, HD: 6, ac: 8 },
+            { name: "Octopus", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Small", cr: 0, hp: 3, HD: 1, ac: 12 },
+            { name: "Ogre", year: 1974, book: "Original D&D", type: "Giant", alignment: "Chaotic Evil", plane: "Material Plane", size: "Large", cr: 2, hp: 59, HD: 7, ac: 11 },
+            { name: "Ogre Zombie", year: 2000, book: "Monster Manual (3e)", type: "Undead", alignment: "Neutral Evil", plane: "Material Plane", size: "Large", cr: 2, hp: 85, HD: 9, ac: 8 },
+            { name: "Oni", year: 1985, book: "Oriental Adventures", type: "Giant", alignment: "Lawful Evil", plane: "Material Plane", size: "Large", cr: 7, hp: 110, HD: 13, ac: 16 },
+            { name: "Orc", year: 1974, book: "Original D&D", type: "Humanoid", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 0.5, hp: 15, HD: 2, ac: 13 },
+            { name: "Otyugh", year: 1977, book: "Monster Manual (1e)", type: "Aberration", alignment: "Neutral", plane: "Material Plane", size: "Large", cr: 5, hp: 114, HD: 12, ac: 14 },
+            { name: "Owl", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Tiny", cr: 0, hp: 1, HD: 1, ac: 11 },
+            { name: "Owlbear", year: 1975, book: "Greyhawk", type: "Monstrosity", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 3, hp: 59, HD: 7, ac: 13 },
+            
+            { name: "Panther", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 13, HD: 3, ac: 12 },
+            { name: "Pegasus", year: 1974, book: "Original D&D", type: "Celestial", alignment: "Chaotic Good", plane: "Material Plane", size: "Large", cr: 2, hp: 59, HD: 7, ac: 12 },
+            { name: "Pentadrone", year: 1981, book: "Fiend Folio", type: "Construct", alignment: "Lawful Neutral", plane: "Mechanus", size: "Large", cr: 2, hp: 32, HD: 5, ac: 16 },
+            { name: "Peryton", year: 1975, book: "Greyhawk", type: "Monstrosity", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 2, hp: 33, HD: 6, ac: 13 },
+            { name: "Phase Spider", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Unaligned", plane: "Ethereal Plane", size: "Large", cr: 3, hp: 32, HD: 5, ac: 13 },
+            { name: "Piercer", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.5, hp: 22, HD: 3, ac: 15 },
+            { name: "Pit Fiend", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Lawful Evil", plane: "The Nine Hells", size: "Large", cr: 20, hp: 300, HD: 24, ac: 19 },
+            { name: "Pixie", year: 1974, book: "Original D&D", type: "Fey", alignment: "Neutral Good", plane: "Feywild", size: "Tiny", cr: 0.25, hp: 1, HD: 1, ac: 15 },
+            { name: "Planetar", year: 1977, book: "Monster Manual (1e)", type: "Celestial", alignment: "Lawful Good", plane: "Upper Planes", size: "Large", cr: 16, hp: 200, HD: 16, ac: 19 },
+            { name: "Plesiosaurus", year: 1981, book: "Fiend Folio", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 2, hp: 68, HD: 8, ac: 13 },
+            { name: "Poltergeist", year: 1977, book: "Monster Manual (1e)", type: "Undead", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 2, hp: 22, HD: 5, ac: 12 },
+            { name: "Pseudodragon", year: 1977, book: "Monster Manual (1e)", type: "Dragon", alignment: "Neutral Good", plane: "Material Plane", size: "Tiny", cr: 0.25, hp: 7, HD: 2, ac: 13 },
+            { name: "Purple Worm", year: 1974, book: "Original D&D", type: "Monstrosity", alignment: "Unaligned", plane: "Material Plane", size: "Gargantuan", cr: 15, hp: 247, HD: 15, ac: 18 },
+            
+            { name: "Quadrone", year: 1981, book: "Fiend Folio", type: "Construct", alignment: "Lawful Neutral", plane: "Mechanus", size: "Medium", cr: 1, hp: 22, HD: 4, ac: 16 },
+            { name: "Quaggoth", year: 1985, book: "Unearthed Arcana (1e)", type: "Humanoid", alignment: "Chaotic Neutral", plane: "Material Plane", size: "Medium", cr: 2, hp: 45, HD: 6, ac: 13 },
+            { name: "Quasit", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Chaotic Evil", plane: "The Abyss", size: "Tiny", cr: 1, hp: 7, HD: 3, ac: 13 },
+            
+            { name: "Rakshasa", year: 1975, book: "Greyhawk", type: "Fiend", alignment: "Lawful Evil", plane: "Material Plane", size: "Medium", cr: 13, hp: 110, HD: 13, ac: 16 },
+            { name: "Rat", year: 1974, book: "Original D&D", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Tiny", cr: 0, hp: 1, HD: 1, ac: 10 },
+            { name: "Raven", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Tiny", cr: 0, hp: 1, HD: 1, ac: 12 },
+            { name: "Red Dragon Wyrmling", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 4, hp: 75, HD: 10, ac: 17 },
+            { name: "Reef Shark", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.5, hp: 22, HD: 4, ac: 12 },
+            { name: "Remorhaz", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Unaligned", plane: "Material Plane", size: "Huge", cr: 11, hp: 195, HD: 17, ac: 17 },
+            { name: "Revenant", year: 1981, book: "Fiend Folio", type: "Undead", alignment: "Neutral", plane: "Material Plane", size: "Medium", cr: 5, hp: 136, HD: 16, ac: 13 },
+            { name: "Rhinoceros", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 2, hp: 45, HD: 6, ac: 11 },
+            { name: "Riding Horse", year: 1974, book: "Original D&D", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 0.25, hp: 13, HD: 2, ac: 10 },
+            { name: "Roc", year: 1974, book: "Original D&D", type: "Monstrosity", alignment: "Unaligned", plane: "Material Plane", size: "Gargantuan", cr: 11, hp: 248, HD: 16, ac: 15 },
+            { name: "Roper", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Neutral Evil", plane: "Material Plane", size: "Large", cr: 5, hp: 93, HD: 11, ac: 20 },
+            { name: "Rust Monster", year: 1975, book: "Greyhawk", type: "Monstrosity", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.5, hp: 27, HD: 5, ac: 14 },
+            
+            { name: "Sahuagin", year: 1975, book: "Blackmoor", type: "Humanoid", alignment: "Lawful Evil", plane: "Material Plane", size: "Medium", cr: 0.5, hp: 22, HD: 4, ac: 12 },
+            { name: "Salamander", year: 1977, book: "Monster Manual (1e)", type: "Elemental", alignment: "Neutral Evil", plane: "Elemental Plane of Fire", size: "Large", cr: 5, hp: 90, HD: 12, ac: 15 },
+            { name: "Satyr", year: 1974, book: "Original D&D", type: "Fey", alignment: "Chaotic Neutral", plane: "Feywild", size: "Medium", cr: 0.5, hp: 31, HD: 7, ac: 14 },
+            { name: "Scarecrow", year: 1983, book: "Monster Manual II", type: "Construct", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 1, hp: 36, HD: 8, ac: 11 },
+            { name: "Scorpion", year: 1974, book: "Original D&D", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Tiny", cr: 0, hp: 1, HD: 1, ac: 11 },
+            { name: "Scout", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Any", plane: "Material Plane", size: "Medium", cr: 0.5, hp: 16, HD: 3, ac: 13 },
+            { name: "Shadow", year: 1974, book: "Original D&D", type: "Undead", alignment: "Chaotic Evil", plane: "Shadowfell", size: "Medium", cr: 0.5, hp: 16, HD: 3, ac: 12 },
+            { name: "Shadow Demon", year: 1979, book: "Monster Manual (1e)", type: "Fiend", alignment: "Chaotic Evil", plane: "The Abyss", size: "Medium", cr: 4, hp: 66, HD: 12, ac: 13 },
+            { name: "Shadow Dragon", year: 1983, book: "Monster Manual II", type: "Dragon", alignment: "Chaotic Evil", plane: "Shadowfell", size: "Huge", cr: 13, hp: 178, HD: 17, ac: 18 },
+            { name: "Shambling Mound", year: 1975, book: "Greyhawk", type: "Plant", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 5, hp: 136, HD: 16, ac: 15 },
+            { name: "Shield Guardian", year: 1985, book: "Unearthed Arcana (1e)", type: "Construct", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 7, hp: 142, HD: 15, ac: 17 },
+            { name: "Shrieker", year: 1977, book: "Monster Manual (1e)", type: "Plant", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0, hp: 13, HD: 3, ac: 5 },
+            { name: "Silver Dragon Wyrmling", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Good", plane: "Material Plane", size: "Medium", cr: 2, hp: 45, HD: 6, ac: 17 },
+            { name: "Skeleton", year: 1974, book: "Original D&D", type: "Undead", alignment: "Lawful Evil", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 13, HD: 2, ac: 13 },
+            { name: "Smoke Mephit", year: 1983, book: "Monster Manual II", type: "Elemental", alignment: "Neutral Evil", plane: "Elemental Plane of Fire", size: "Small", cr: 0.25, hp: 22, HD: 5, ac: 12 },
+            { name: "Solar", year: 1977, book: "Monster Manual (1e)", type: "Celestial", alignment: "Lawful Good", plane: "Upper Planes", size: "Large", cr: 21, hp: 243, HD: 18, ac: 21 },
+            { name: "Specter", year: 1974, book: "Original D&D", type: "Undead", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 1, hp: 22, HD: 5, ac: 12 },
+            { name: "Spider", year: 1974, book: "Original D&D", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Tiny", cr: 0, hp: 1, HD: 1, ac: 12 },
+            { name: "Spirit Naga", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Chaotic Evil", plane: "Material Plane", size: "Large", cr: 8, hp: 75, HD: 10, ac: 15 },
+            { name: "Sprite", year: 1974, book: "Original D&D", type: "Fey", alignment: "Neutral Good", plane: "Feywild", size: "Tiny", cr: 0.25, hp: 2, HD: 1, ac: 15 },
+            { name: "Spy", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Any", plane: "Material Plane", size: "Medium", cr: 1, hp: 27, HD: 6, ac: 12 },
+            { name: "Steam Mephit", year: 1983, book: "Monster Manual II", type: "Elemental", alignment: "Neutral Evil", plane: "Elemental Plane of Water", size: "Small", cr: 0.25, hp: 21, HD: 6, ac: 10 },
+            { name: "Stirge", year: 1975, book: "Greyhawk", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Tiny", cr: 0.125, hp: 2, HD: 1, ac: 14 },
+            { name: "Stone Giant", year: 1974, book: "Original D&D", type: "Giant", alignment: "Neutral", plane: "Material Plane", size: "Huge", cr: 7, hp: 126, HD: 11, ac: 17 },
+            { name: "Stone Golem", year: 1974, book: "Original D&D", type: "Construct", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 10, hp: 178, HD: 17, ac: 17 },
+            { name: "Storm Giant", year: 1974, book: "Original D&D", type: "Giant", alignment: "Chaotic Good", plane: "Material Plane", size: "Huge", cr: 13, hp: 230, HD: 20, ac: 16 },
+            { name: "Succubus/Incubus", year: 1977, book: "Monster Manual (1e)", type: "Fiend", alignment: "Neutral Evil", plane: "Lower Planes", size: "Medium", cr: 4, hp: 66, HD: 12, ac: 15 },
+            { name: "Swarm of Bats", year: 2000, book: "Monster Manual (3e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 22, HD: 5, ac: 12 },
+            { name: "Swarm of Insects", year: 2000, book: "Monster Manual (3e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.5, hp: 22, HD: 5, ac: 12 },
+            { name: "Swarm of Rats", year: 2000, book: "Monster Manual (3e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 24, HD: 7, ac: 10 },
+            
+            { name: "Tarrasque", year: 1983, book: "Monster Manual II", type: "Monstrosity", alignment: "Unaligned", plane: "Material Plane", size: "Gargantuan", cr: 30, hp: 676, HD: 33, ac: 25 },
+            { name: "Thri-kreen", year: 1981, book: "Fiend Folio", type: "Humanoid", alignment: "Chaotic Neutral", plane: "Material Plane", size: "Medium", cr: 1, hp: 33, HD: 6, ac: 15 },
+            { name: "Tiger", year: 1974, book: "Original D&D", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 1, hp: 37, HD: 5, ac: 12 },
+            { name: "Treant", year: 1974, book: "Original D&D", type: "Plant", alignment: "Chaotic Good", plane: "Material Plane", size: "Huge", cr: 9, hp: 138, HD: 12, ac: 16 },
+            { name: "Tribal Warrior", year: 1974, book: "Original D&D", type: "Humanoid", alignment: "Any", plane: "Material Plane", size: "Medium", cr: 0.125, hp: 11, HD: 2, ac: 12 },
+            { name: "Triceratops", year: 1981, book: "Fiend Folio", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Huge", cr: 5, hp: 95, HD: 10, ac: 13 },
+            { name: "Troll", year: 1974, book: "Original D&D", type: "Giant", alignment: "Chaotic Evil", plane: "Material Plane", size: "Large", cr: 5, hp: 84, HD: 8, ac: 15 },
+            { name: "Twig Blight", year: 2003, book: "Monster Manual (3.5e)", type: "Plant", alignment: "Neutral Evil", plane: "Material Plane", size: "Small", cr: 0.125, hp: 4, HD: 1, ac: 13 },
+            { name: "Tyrannosaurus Rex", year: 1981, book: "Fiend Folio", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Huge", cr: 8, hp: 136, HD: 13, ac: 13 },
+            
+            { name: "Ultroloth", year: 1981, book: "Fiend Folio", type: "Fiend", alignment: "Neutral Evil", plane: "Lower Planes", size: "Medium", cr: 13, hp: 153, HD: 18, ac: 19 },
+            { name: "Umber Hulk", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Chaotic Evil", plane: "Material Plane", size: "Large", cr: 5, hp: 93, HD: 11, ac: 18 },
+            { name: "Unicorn", year: 1974, book: "Original D&D", type: "Celestial", alignment: "Lawful Good", plane: "Material Plane", size: "Large", cr: 5, hp: 67, HD: 9, ac: 12 },
+            
+            { name: "Vampire", year: 1974, book: "Original D&D", type: "Undead", alignment: "Lawful Evil", plane: "Material Plane", size: "Medium", cr: 13, hp: 144, HD: 17, ac: 16 },
+            { name: "Vampire Spawn", year: 1977, book: "Monster Manual (1e)", type: "Undead", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 5, hp: 82, HD: 11, ac: 15 },
+            { name: "Veteran", year: 1977, book: "Monster Manual (1e)", type: "Humanoid", alignment: "Any", plane: "Material Plane", size: "Medium", cr: 3, hp: 58, HD: 9, ac: 17 },
+            { name: "Vine Blight", year: 2003, book: "Monster Manual (3.5e)", type: "Plant", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 0.5, hp: 26, HD: 4, ac: 12 },
+            { name: "Violet Fungus", year: 1977, book: "Monster Manual (1e)", type: "Plant", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 18, HD: 4, ac: 5 },
+            { name: "Vrock", year: 1976, book: "Eldritch Wizardry", type: "Fiend", alignment: "Chaotic Evil", plane: "The Abyss", size: "Large", cr: 6, hp: 104, HD: 11, ac: 15 },
+            { name: "Vulture", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0, hp: 5, HD: 1, ac: 10 },
+            
+            { name: "Warhorse", year: 1974, book: "Original D&D", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 0.5, hp: 19, HD: 3, ac: 11 },
+            { name: "Warhorse Skeleton", year: 1977, book: "Monster Manual (1e)", type: "Undead", alignment: "Lawful Evil", plane: "Material Plane", size: "Large", cr: 0.5, hp: 22, HD: 3, ac: 13 },
+            { name: "Water Elemental", year: 1974, book: "Original D&D", type: "Elemental", alignment: "Neutral", plane: "Elemental Plane of Water", size: "Large", cr: 5, hp: 114, HD: 12, ac: 14 },
+            { name: "Water Weird", year: 1975, book: "Greyhawk", type: "Elemental", alignment: "Neutral", plane: "Elemental Plane of Water", size: "Large", cr: 3, hp: 58, HD: 9, ac: 13 },
+            { name: "Weasel", year: 1977, book: "Monster Manual (1e)", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Tiny", cr: 0, hp: 1, HD: 1, ac: 13 },
+            { name: "Werebear", year: 1974, book: "Original D&D", type: "Humanoid", alignment: "Neutral Good", plane: "Material Plane", size: "Medium", cr: 5, hp: 135, HD: 18, ac: 10 },
+            { name: "Wereboar", year: 1974, book: "Original D&D", type: "Humanoid", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 4, hp: 78, HD: 12, ac: 10 },
+            { name: "Wererat", year: 1974, book: "Original D&D", type: "Humanoid", alignment: "Lawful Evil", plane: "Material Plane", size: "Medium", cr: 2, hp: 33, HD: 6, ac: 12 },
+            { name: "Weretiger", year: 1974, book: "Original D&D", type: "Humanoid", alignment: "Neutral", plane: "Material Plane", size: "Medium", cr: 4, hp: 120, HD: 16, ac: 12 },
+            { name: "Werewolf", year: 1974, book: "Original D&D", type: "Humanoid", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 3, hp: 58, HD: 9, ac: 11 },
+            { name: "White Dragon Wyrmling", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Evil", plane: "Material Plane", size: "Medium", cr: 2, hp: 32, HD: 5, ac: 16 },
+            { name: "Wight", year: 1974, book: "Original D&D", type: "Undead", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 3, hp: 45, HD: 6, ac: 14 },
+            { name: "Will-o'-Wisp", year: 1975, book: "Greyhawk", type: "Undead", alignment: "Chaotic Evil", plane: "Material Plane", size: "Tiny", cr: 2, hp: 22, HD: 9, ac: 19 },
+            { name: "Winter Wolf", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Neutral Evil", plane: "Material Plane", size: "Large", cr: 3, hp: 75, HD: 10, ac: 13 },
+            { name: "Wolf", year: 1974, book: "Original D&D", type: "Beast", alignment: "Unaligned", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 11, HD: 2, ac: 13 },
+            { name: "Worg", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Neutral Evil", plane: "Material Plane", size: "Large", cr: 0.5, hp: 26, HD: 4, ac: 13 },
+            { name: "Wraith", year: 1974, book: "Original D&D", type: "Undead", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 5, hp: 67, HD: 9, ac: 13 },
+            { name: "Wyvern", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 6, hp: 110, HD: 13, ac: 13 },
+            
+            { name: "Xorn", year: 1977, book: "Monster Manual (1e)", type: "Elemental", alignment: "Neutral", plane: "Elemental Plane of Earth", size: "Medium", cr: 5, hp: 73, HD: 7, ac: 19 },
+            
+            { name: "Yeti", year: 1977, book: "Monster Manual (1e)", type: "Monstrosity", alignment: "Chaotic Evil", plane: "Material Plane", size: "Large", cr: 3, hp: 51, HD: 6, ac: 12 },
+            { name: "Young Black Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Evil", plane: "Material Plane", size: "Large", cr: 7, hp: 127, HD: 15, ac: 18 },
+            { name: "Young Blue Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Evil", plane: "Material Plane", size: "Large", cr: 9, hp: 152, HD: 16, ac: 18 },
+            { name: "Young Brass Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Good", plane: "Material Plane", size: "Large", cr: 6, hp: 110, HD: 13, ac: 17 },
+            { name: "Young Bronze Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Good", plane: "Material Plane", size: "Large", cr: 8, hp: 142, HD: 15, ac: 18 },
+            { name: "Young Copper Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Good", plane: "Material Plane", size: "Large", cr: 7, hp: 119, HD: 14, ac: 17 },
+            { name: "Young Gold Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Good", plane: "Material Plane", size: "Large", cr: 10, hp: 178, HD: 17, ac: 18 },
+            { name: "Young Green Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Evil", plane: "Material Plane", size: "Large", cr: 8, hp: 136, HD: 16, ac: 18 },
+            { name: "Young Red Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Evil", plane: "Material Plane", size: "Large", cr: 10, hp: 178, HD: 17, ac: 18 },
+            { name: "Young Red Shadow Dragon", year: 2012, book: "Monster Manual (5e)", type: "Dragon", alignment: "Chaotic Evil", plane: "Shadowfell", size: "Large", cr: 13, hp: 178, HD: 17, ac: 18 },
+            { name: "Young Remorhaz", year: 2008, book: "Monster Manual (4e)", type: "Monstrosity", alignment: "Unaligned", plane: "Material Plane", size: "Large", cr: 5, hp: 93, HD: 11, ac: 14 },
+            { name: "Young Silver Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Lawful Good", plane: "Material Plane", size: "Large", cr: 9, hp: 168, HD: 16, ac: 18 },
+            { name: "Young White Dragon", year: 1974, book: "Original D&D", type: "Dragon", alignment: "Chaotic Evil", plane: "Material Plane", size: "Large", cr: 6, hp: 133, HD: 14, ac: 17 },
+            { name: "Yuan-ti Abomination", year: 1981, book: "Fiend Folio", type: "Monstrosity", alignment: "Neutral Evil", plane: "Material Plane", size: "Large", cr: 7, hp: 127, HD: 15, ac: 15 },
+            { name: "Yuan-ti Malison", year: 1981, book: "Fiend Folio", type: "Monstrosity", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 3, hp: 66, HD: 12, ac: 12 },
+            { name: "Yuan-ti Pureblood", year: 1981, book: "Fiend Folio", type: "Humanoid", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 1, hp: 40, HD: 9, ac: 11 },
+            
+            { name: "Zombie", year: 1974, book: "Original D&D", type: "Undead", alignment: "Neutral Evil", plane: "Material Plane", size: "Medium", cr: 0.25, hp: 22, HD: 3, ac: 8 },
+
+        ];
+        
+        let targetMonster;
+        let guessesRemaining = 8;
+        let gameOver = false;
+        let startTime;
+        let timerInterval;
+        
+        // Initialize game
+        window.onload = function() {
+            initializeGame();
+            
+            // Set up event listeners
+            document.getElementById('monster-submit').addEventListener('click', makeGuess);
+            document.getElementById('monster-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    makeGuess();
+                }
+            });
+            
+            document.getElementById('help-button').addEventListener('click', function() {
+                document.getElementById('help-modal').style.display = 'block';
+            });
+            
+            document.getElementsByClassName('close')[0].addEventListener('click', function() {
+                document.getElementById('help-modal').style.display = 'none';
+            });
+            
+            document.getElementById('new-game').addEventListener('click', initializeGame);
+            
+            // Close modal when clicking outside of it
+            window.addEventListener('click', function(event) {
+                if (event.target == document.getElementById('help-modal')) {
+                    document.getElementById('help-modal').style.display = 'none';
+                }
+            });
+            
+            // Autocomplete setup
+            const input = document.getElementById('monster-input');
+            const autocompleteContainer = document.getElementById('monster-autocomplete');
+            
+            input.addEventListener('input', function() {
+                const inputValue = this.value.toLowerCase();
+                
+                // Clear previous results
+                autocompleteContainer.innerHTML = '';
+                
+                if (inputValue.length < 2) {
+                    autocompleteContainer.style.display = 'none';
+                    return;
+                }
+                
+                // Find matches
+                const matches = monsterDatabase.filter(monster => 
+                    monster.name.toLowerCase().includes(inputValue)
+                );
+                
+                if (matches.length === 0) {
+                    autocompleteContainer.style.display = 'none';
+                    return;
+                }
+                
+                // Display matches
+                matches.forEach(monster => {
+                    const item = document.createElement('div');
+                    item.className = 'autocomplete-item';
+                    item.textContent = monster.name;
+                    item.addEventListener('click', function() {
+                        input.value = monster.name;
+                        autocompleteContainer.style.display = 'none';
+                    });
+                    autocompleteContainer.appendChild(item);
+                });
+                
+                autocompleteContainer.style.display = 'block';
+            });
+            
+            // Hide autocomplete when clicking outside
+            document.addEventListener('click', function(e) {
+                if (e.target !== input && e.target !== autocompleteContainer) {
+                    autocompleteContainer.style.display = 'none';
+                }
+            });
+        };
+        
+        function initializeGame() {
+            // Reset game state
+            guessesRemaining = 8;
+            gameOver = false;
+            document.getElementById('guesses').innerHTML = '';
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('new-game').style.display = 'none';
+            document.getElementById('monster-input').value = '';
+            document.getElementById('monster-submit').disabled = false;
+            document.getElementById('monster-input').disabled = false;
+            document.getElementById('guesses-left').textContent = `Guesses: ${guessesRemaining} remaining`;
+            
+            // Choose a random monster
+            targetMonster = monsterDatabase[Math.floor(Math.random() * monsterDatabase.length)];
+            console.log("Target monster:", targetMonster);
+            
+            // Reset and start timer
+            clearInterval(timerInterval);
+            startTime = new Date();
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+        
+        function updateTimer() {
+            const elapsedTime = Math.floor((new Date() - startTime) / 1000);
+            const minutes = Math.floor(elapsedTime / 60).toString().padStart(2, '0');
+            const seconds = (elapsedTime % 60).toString().padStart(2, '0');
+            document.getElementById('timer').textContent = `Time: ${minutes}:${seconds}`;
+        }
+        
+        function makeGuess() {
+            if (gameOver) return;
+            
+            const guessInput = document.getElementById('monster-input');
+            const guessName = guessInput.value.trim();
+            
+            // Check if the guess is a valid monster
+            const guessMonster = monsterDatabase.find(m => m.name.toLowerCase() === guessName.toLowerCase());
+            
+            if (!guessMonster) {
+                alert("Monster Not in Database.");
+                return;
+            }
+            
+            // Clear input
+            guessInput.value = '';
+            
+            // Decrement guesses
+            guessesRemaining--;
+            document.getElementById('guesses-left').textContent = `Guesses: ${guessesRemaining} remaining`;
+            
+            // Create row for guess
+            const guessRow = document.createElement('tr');
+            guessRow.className = 'monster-row';
+            
+            // Add monster name
+            const nameCell = document.createElement('td');
+            nameCell.textContent = guessMonster.name;
+            guessRow.appendChild(nameCell);
+            
+            // Check each attribute
+            checkAttribute(guessRow, guessMonster.year, targetMonster.year);
+            checkAttribute(guessRow, guessMonster.book, targetMonster.book);
+            checkAttribute(guessRow, guessMonster.type, targetMonster.type);
+            checkAttribute(guessRow, guessMonster.plane, targetMonster.plane);
+            checkAttribute(guessRow, guessMonster.alignment, targetMonster.alignment);
+            checkAttribute(guessRow, guessMonster.size, targetMonster.size);
+            checkAttribute(guessRow, guessMonster.cr, targetMonster.cr);
+            checkAttribute(guessRow, guessMonster.hp, targetMonster.hp);
+            checkAttribute(guessRow, guessMonster.ac, targetMonster.ac);
+            
+            // Add row to board
+            document.getElementById('guesses').appendChild(guessRow);
+            
+            // Check if game is won
+            if (guessMonster.name === targetMonster.name) {
+                gameWon();
+                return;
+            }
+            
+            // Check if game is over
+            if (guessesRemaining === 0) {
+                gameLost();
+            }
+        }
+        
+        function checkAttribute(row, guessAttr, targetAttr) {
+            const cell = document.createElement('td');
+            cell.textContent = guessAttr;
+            
+            if (guessAttr === targetAttr) {
+                cell.className = 'correct';
+            } else if (typeof guessAttr === 'number' && typeof targetAttr === 'number') {
+                if (guessAttr < targetAttr) {
+                    cell.className = 'higher';
+                } else {
+                    cell.className = 'lower';
+                }
+            } else {
+                cell.className = 'incorrect';
+            }
+            
+            row.appendChild(cell);
+        }
+        
+        function gameWon() {
+            gameOver = true;
+            clearInterval(timerInterval);
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = `Congratulations! You found the ${targetMonster.name} in ${8 - guessesRemaining} guesses!`;
+            resultDiv.className = 'win';
+            resultDiv.style.display = 'block';
+            
+            document.getElementById('monster-submit').disabled = true;
+            document.getElementById('monster-input').disabled = true;
+            document.getElementById('new-game').style.display = 'block';
+        }
+        
+        function gameLost() {
+            gameOver = true;
+            clearInterval(timerInterval);
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = `Game over! The monster was ${targetMonster.name}.`;
+            resultDiv.className = 'lose';
+            resultDiv.style.display = 'block';
+            
+            document.getElementById('monster-submit').disabled = true;
+            document.getElementById('monster-input').disabled = true;
+            document.getElementById('new-game').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
