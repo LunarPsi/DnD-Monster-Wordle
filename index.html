@@ -225,7 +225,7 @@
 </head>
 <body>
     <h1>D&D Monster Wordle</h1>
-    <h2>Guess the monster in 8 tries!</h2>
+    <h2>Guess the monster in 20 tries!</h2>
     
     <button class="help-button" id="help-button">?</button>
     
@@ -235,7 +235,7 @@
             <h2>How to Play</h2>
             <p>Try to guess the D&D monster by comparing its attributes!</p>
             <ul>
-                <li>You have 8 guesses to figure out the mystery monster</li>
+                <li>You have 20 guesses to figure out the mystery monster</li>
                 <li>Each guess must be a valid D&D monster from the database</li>
                 <li>After each guess, you'll get hints about how close you are</li>
             </ul>
@@ -930,7 +930,7 @@
             clearInterval(timerInterval);
             
             const resultDiv = document.getElementById('result');
-            resultDiv.textContent = `Congratulations! You found the ${targetMonster.name} in ${8 - guessesRemaining} guesses!`;
+            resultDiv.textContent = `Congratulations! You found the ${targetMonster.name} in ${20 - guessesRemaining} guesses!`;
             resultDiv.className = 'win';
             resultDiv.style.display = 'block';
             
